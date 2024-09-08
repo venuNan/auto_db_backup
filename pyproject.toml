@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "auto-db-backup"
+version = "0.1.0"
+description = "This package enables you to backup the database files and automate the process"
+authors = ["venureddy <venureddy3808@gmail.com>"]
+license = "custom"
+readme = "README.md"
+keywords = ["dbbackup","auto_db_backup","auto_dbbackup"]
+classifiers = [
+  "Programming Language :: Python"
+]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+click = "^8.1.7"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+auto_db_backup = "auto_db_backup.auto_db_backup:cli"
+
