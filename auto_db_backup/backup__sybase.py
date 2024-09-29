@@ -1,4 +1,4 @@
 
 
-def backupsybase(host:str, username:str, passwd, database_name:str, compress:bool, storage_option: str, logging:bool, port_no:int=5000) -> None:
+def backupsybase(host, port, username, passwd, database_name, compress, storage_option, provider, notification, slack_token, channel_id, logging,restore, backup_dir, csv_backup_format, tables, backup_file) -> None:
     pass
