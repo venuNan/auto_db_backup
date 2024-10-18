@@ -1,6 +1,7 @@
 import click
 import os
 import logging
+from pathlib import Path
 
 
 # ANSI escape codes for colors
@@ -45,12 +46,6 @@ def auto_backup(func):
     return func
 
 
-# Parameters to store the backup files on the cloud
-def storage_option(func):
-    func = click.option("--storage_option", "-so", required=False, is_flag=True, help="Where to store the backup, in the cloud or local system")(func)
-    func = click.option("--provider","-prov",required=False , type=click.Choice(["aws","gcp","azure"]), help="To backup the database to a cloud provider for (Example : AWS, GCP, AZURE.)")(func)
-    return func
-
 # Flag to enable slack notification services
 def notification(func):
     func = click.option("--notification", "-n", is_flag = True, help="To send slack notifications about the backup operations.")(func)
@@ -63,28 +58,32 @@ def logging_option(func):
     func = click.option("--logging", "-log", is_flag=True, help="Log the operations performed on the database and the timing of the backup")(func)
     return func
 
+
 # To restore a database form a .sql file.
 def restore_database(func):
     func = click.option("--restore", "-r", is_flag=True, help="Restore a database from a backup")(func)
     func = click.option("--backup_file", required=False, help = "The backup file to restore the databse. It needs to be an .sql file")(func)
     return func
 
+
 # backup directiry of the backup files folder and log file
 def backup_dir(func):
-    func = click.option('--backup_dir', default=f'{os.getcwd()}', hidden=True)(func)
+    func = click.option('--backup_dir', default=f'{Path.home()}', hidden=True)(func)
     return func
+
 
 # To backup from multiple tables in  a database for SQl databases
 def tables_option(func):
     func = click.option("--tables", "-t", multiple=True, required=False, help="Specify tables to back up. Use multiple '-t table_name1 -t table_name2' for multiple tables.")(func)
     return func
 
+
 # To backup the files in csv format you need to enable the this flag
 def backup_format(func):
     func = click.option("--csv_backup_format", "-cf", is_flag=True, required=False, help="By default the files are stored in SQL format for sql databses and JSON format for NOSQL databases, Enable this flag to backup the databse files into csv format.")(func)
     return func
 
-def check_parameters(auto_backup, interval, frequency, storage_option, provider, notification, slack_token, channel_id, restore, backup_file, tables):
+def check_parameters(auto_backup, interval, frequency, notification, slack_token, channel_id, restore, backup_file):
     errors = []
 
     # Check for auto_backup related conditions
@@ -94,14 +93,6 @@ def check_parameters(auto_backup, interval, frequency, storage_option, provider,
     else:
         if interval or frequency:
             errors.append(f"\n{RED}Error:- Unexpected arguments: --interval or --frequency without --auto_backup.{RESET}")
-
-    # Check for cloud storage options
-    if storage_option:
-        if not provider:
-            errors.append(f"\n{RED}Error:- --provider must be specified when using --storage_option.{RESET}")
-    else:
-        if provider:
-            errors.append(f"\n{RED}Error:- Unexpected argument: --provider without --storage_option.{RESET}")
 
     # Check for notification settings
     if notification:
@@ -137,200 +128,149 @@ def check_parameters(auto_backup, interval, frequency, storage_option, provider,
 @database_connection
 @compress
 @auto_backup
-@storage_option
 @notification
 @logging_option
 @restore_database
 @backup_dir
 @backup_format
 @tables_option
-def backup_mysql(host, port, username, password,database_name, compress, auto_backup, interval, frequency, storage_option, provider, notification, slack_token, channel_id, logging, restore, backup_dir, csv_backup_format, tables, backup_file):
-    res = check_parameters(auto_backup, interval, frequency, storage_option, provider, notification, slack_token, channel_id, restore, backup_file)
+def backup_mysql(host, port, username, password,database_name, compress, auto_backup, interval, frequency,  notification, slack_token, channel_id, logging, restore, backup_dir, csv_backup_format, tables, backup_file):
+    res = check_parameters(auto_backup, interval, frequency, notification, slack_token, channel_id, restore, backup_file)
     if res:
         from backup__mysql import backupmysql
-        backupmysql(host, port, username, password, database_name, compress, storage_option, provider, notification, slack_token, channel_id, logging,restore, backup_dir, csv_backup_format, tables, backup_file)
+        backupmysql(host, port, username, password, database_name, compress, notification, slack_token, channel_id, logging,restore, backup_dir, csv_backup_format, tables, backup_file)
         if auto_backup:
             from auto_backup_services import automatic_backup_process
-            automatic_backup_process(host, port, username, password, database_name, compress, interval, frequency, storage_option, provider, notification, slack_token, channel_id, logging,restore, csv_backup_format, tables, backup_file, "SQL", "backup-mysql")
+            automatic_backup_process(host, port, username, password, database_name, compress, interval, frequency, notification, slack_token, channel_id, logging,restore, csv_backup_format, tables, backup_file, "SQL", "backup-mysql")
 
 
 @click.command()
 @database_connection
 @compress
 @auto_backup
-@storage_option
 @notification
 @logging_option
 @restore_database
 @backup_dir
 @backup_format
 @tables_option
-def backup_postgresql(host, port, username, password,database_name, compress, auto_backup, interval, frequency, storage_option, provider, notification, slack_token, channel_id, logging, restore, backup_dir, csv_backup_format, tables, backup_file):
+def backup_postgresql(host, port, username, password,database_name, compress, auto_backup, interval, frequency, notification, slack_token, channel_id, logging, restore, backup_dir, csv_backup_format, tables, backup_file):
     from backup__postgresql import backuppostgresql
-    res = check_parameters(auto_backup, interval, frequency, storage_option, provider, notification, slack_token, channel_id, restore, backup_file)
+    res = check_parameters(auto_backup, interval, frequency, notification, slack_token, channel_id, restore, backup_file)
     if res:
-        backuppostgresql(host, port, username, password, database_name, compress, storage_option, provider, notification, slack_token, channel_id, logging,restore, backup_dir, csv_backup_format, tables, backup_file)
+        backuppostgresql(host, port, username, password, database_name, compress, notification, slack_token, channel_id, logging,restore, backup_dir, csv_backup_format, tables, backup_file)
         if auto_backup:
             from auto_backup_services import automatic_backup_process
-            automatic_backup_process(host, port, username, password, database_name, compress, interval, frequency, storage_option, provider, notification, slack_token, channel_id, logging,restore, csv_backup_format, tables, backup_file, "SQL", "backup-postgresql")
+            automatic_backup_process(host, port, username, password, database_name, compress, interval, frequency, notification, slack_token, channel_id, logging,restore, csv_backup_format, tables, backup_file, "SQL", "backup-postgresql")
 
 
 @click.command()
-@database_connection
+@click.option("--database_name", "-db_name", required=True, help="Name of the database you want to backup")
 @compress
 @auto_backup
-@storage_option
 @notification
 @logging_option
 @restore_database
 @backup_dir
 @backup_format
 @tables_option
-def backup_sqlite3(host, port, username, password, database_name, compress, auto_backup, interval, frequency, storage_option, provider, notification, slack_token, channel_id, logging, restore, backup_dir, csv_backup_format, tables, backup_file):
+def backup_sqlite3(database_name, compress, auto_backup, interval, frequency, notification, slack_token, channel_id, logging, restore, backup_dir, csv_backup_format, tables, backup_file):
     from backup__sqlite3 import backupsqlite3
-    res = check_parameters(auto_backup, interval, frequency, storage_option, provider, notification, slack_token, channel_id, restore, backup_file)
+    res = check_parameters(auto_backup, interval, frequency, notification, slack_token, channel_id, restore, backup_file)
     if res:
-        backupsqlite3(host, port, username, password, database_name, compress, storage_option, provider, notification, slack_token, channel_id, logging,restore, backup_dir, csv_backup_format, tables, backup_file)
+        backupsqlite3(database_name, compress, notification, slack_token, channel_id, logging,restore, backup_dir, csv_backup_format, tables, backup_file)
         if auto_backup:
             from auto_backup_services import automatic_backup_process
-            automatic_backup_process(host, port, username, password, database_name, compress, interval, frequency, storage_option, provider, notification, slack_token, channel_id, logging,restore, csv_backup_format, tables, backup_file, "SQL", "backup-sqlite3")
+            automatic_backup_process(None, None, None, None, database_name, compress, interval, frequency, notification, slack_token, channel_id, logging,restore, csv_backup_format, tables, backup_file, "SQL", "backup-sqlite3")
 
 
 @click.command()
 @database_connection
 @compress
 @auto_backup
-@storage_option
 @notification
 @logging_option
 @restore_database
 @backup_dir
 @backup_format
 @tables_option
-def backup_sqlserver(host, port, username, password,database_name, compress, auto_backup, interval, frequency, storage_option, provider, notification, slack_token, channel_id, logging, restore, backup_dir, csv_backup_format, tables, backup_file):
+def backup_sqlserver(host, port, username, password,database_name, compress, auto_backup, interval, frequency, notification, slack_token, channel_id, logging, restore, backup_dir, csv_backup_format, tables, backup_file):
     from backup__sqlserver import backupsqlserver
-    res = check_parameters(auto_backup, interval, frequency, storage_option, provider, notification, slack_token, channel_id, restore, backup_file)
+    res = check_parameters(auto_backup, interval, frequency, notification, slack_token, channel_id, restore, backup_file)
     if res:
-        backupsqlserver(host, port, username, password, database_name, compress, storage_option, provider, notification, slack_token, channel_id, logging,restore, backup_dir, csv_backup_format, tables, backup_file)
+        backupsqlserver(host, port, username, password, database_name, compress, notification, slack_token, channel_id, logging,restore, backup_dir, csv_backup_format, tables, backup_file)
         if auto_backup:
             from auto_backup_services import automatic_backup_process
-            automatic_backup_process(host, port, username, password, database_name, compress, interval, frequency, storage_option, provider, notification, slack_token, channel_id, logging,restore, csv_backup_format, tables, backup_file, "SQL", "backup-sqlserver")
+            automatic_backup_process(host, port, username, password, database_name, compress, interval, frequency, notification, slack_token, channel_id, logging,restore, csv_backup_format, tables, backup_file, "SQL", "backup-sqlserver")
 
 
 @click.command()
 @database_connection
 @compress
 @auto_backup
-@storage_option
 @notification
 @logging_option
 @restore_database
 @backup_dir
 @backup_format
 @tables_option
-def backup_mariadb(host, port, username, password,database_name, compress, auto_backup, interval, frequency, storage_option, provider, notification, slack_token, channel_id, logging, restore, backup_dir, csv_backup_format, tables, backup_file):
+def backup_mariadb(host, port, username, password,database_name, compress, auto_backup, interval, frequency, notification, slack_token, channel_id, logging, restore, backup_dir, csv_backup_format, tables, backup_file):
     from backup__mariadb import backupmariadb
-    res = check_parameters(auto_backup, interval, frequency, storage_option, provider, notification, slack_token, channel_id, restore, backup_file)
+    res = check_parameters(auto_backup, interval, frequency, notification, slack_token, channel_id, restore, backup_file)
     if res:
-        backupmariadb(host, port, username, password, database_name, compress, storage_option, provider, notification, slack_token, channel_id, logging,restore, backup_dir, csv_backup_format, tables, backup_file)
+        backupmariadb(host, port, username, password, database_name, compress, notification, slack_token, channel_id, logging,restore, backup_dir, csv_backup_format, tables, backup_file)
         if auto_backup:
             from auto_backup_services import automatic_backup_process
-            automatic_backup_process(host, port, username, password, database_name, compress, interval, frequency, storage_option, provider, notification, slack_token, channel_id, logging,restore, csv_backup_format, tables, backup_file, "SQL", "backup-mariadb")
+            automatic_backup_process(host, port, username, password, database_name, compress, interval, frequency, notification, slack_token, channel_id, logging,restore, csv_backup_format, tables, backup_file, "SQL", "backup-mariadb")
 
 
 @click.command()
 @database_connection
 @compress
 @auto_backup
-@storage_option
 @notification
 @logging_option
 @restore_database
 @backup_dir
 @backup_format
 @tables_option
-def backup_oracledb(host, port, username, password,database_name, compress, auto_backup, interval, frequency, storage_option, provider, notification, slack_token, channel_id, logging, restore, backup_dir, csv_backup_format, tables, backup_file):
+def backup_oracledb(host, port, username, password,database_name, compress, auto_backup, interval, frequency, notification, slack_token, channel_id, logging, restore, backup_dir, csv_backup_format, tables, backup_file):
     from backup__oracledb import backuporacledb
-    res = check_parameters(auto_backup, interval, frequency, storage_option, provider, notification, slack_token, channel_id, restore, backup_file)
+    res = check_parameters(auto_backup, interval, frequency, notification, slack_token, channel_id, restore, backup_file)
     if res:
-        backuporacledb(host, port, username, password, database_name, compress, storage_option, provider, notification, slack_token, channel_id, logging,restore, backup_dir, csv_backup_format, tables, backup_file)
+        backuporacledb(host, port, username, password, database_name, compress, notification, slack_token, channel_id, logging,restore, backup_dir, csv_backup_format, tables, backup_file)
         if auto_backup:
             from auto_backup_services import automatic_backup_process
-            automatic_backup_process(host, port, username, password, database_name, compress, interval, frequency, storage_option, provider, notification, slack_token, channel_id, logging,restore, csv_backup_format, tables, backup_file, "SQL", "backup-oracledb")
+            automatic_backup_process(host, port, username, password, database_name, compress, interval, frequency, notification, slack_token, channel_id, logging,restore, csv_backup_format, tables, backup_file, "SQL", "backup-oracledb")
 
 
 @click.command()
 @database_connection
 @compress
 @auto_backup
-@storage_option
-@notification
-@logging_option
-@restore_database
-@backup_dir
-@backup_format
-@tables_option
-def backup_sybase(host, port, username, password,database_name, compress, auto_backup, interval, frequency, storage_option, provider, notification, slack_token, channel_id, logging, restore, backup_dir, csv_backup_format, tables, backup_file):
-    from backup__sybase import backupsybase
-    res = check_parameters(auto_backup, interval, frequency, storage_option, provider, notification, slack_token, channel_id, restore, backup_file)
-    if res:
-        backupsybase(host, port, username, password, database_name, compress, storage_option, provider, notification, slack_token, channel_id, logging,restore, backup_dir, csv_backup_format, tables, backup_file)
-        if auto_backup:
-            from auto_backup_services import automatic_backup_process
-            automatic_backup_process(host, port, username, password, database_name, compress, interval, frequency, storage_option, provider, notification, slack_token, channel_id, logging,restore, csv_backup_format, tables, backup_file, "SQL", "backup-sybase")
-
-
-@click.command()
-@database_connection
-@compress
-@auto_backup
-@storage_option
-@notification
-@logging_option
-@restore_database
-@backup_dir
-@backup_format
-@tables_option
-def backup_teradata(host, port, username, password, database_name, compress, auto_backup, interval, frequency, storage_option, provider, notification, slack_token, channel_id, logging, restore, backup_dir, csv_backup_format, tables, backup_file):
-    from backup__teradata import backupteradata
-    res = check_parameters(auto_backup, interval, frequency, storage_option, provider, notification, slack_token, channel_id, restore, backup_file)
-    if res:
-        backupteradata(host, port, username, password, database_name, compress, storage_option, provider, notification, slack_token, channel_id, logging,restore, backup_dir, csv_backup_format, tables, backup_file)
-        if auto_backup:
-            from auto_backup_services import automatic_backup_process
-            automatic_backup_process(host, port, username, password, database_name, compress, interval, frequency, storage_option, provider, notification, slack_token, channel_id, logging,restore, csv_backup_format, tables, backup_file, "SQL", "backup-teradata")
-
-
-@click.command()
-@database_connection
-@compress
-@auto_backup
-@storage_option
 @notification
 @logging_option
 @restore_database
 @backup_dir
 @backup_format
 @click.option("--collection_name","-col", multiple=True, required=False, help="Specify collections to back up. Use multiple '-col collection_name1 -col collection_name2 etc' for multiple collections.")
-def backup_mongodb(host, port, username, password,database_name, compress, auto_backup, interval, frequency, storage_option, provider, notification, slack_token, channel_id, logging, restore, backup_dir, csv_backup_format, collection_name, backup_file):
+def backup_mongodb(host, port, username, password,database_name, compress, auto_backup, interval, frequency, notification, slack_token, channel_id, logging, restore, backup_dir, csv_backup_format, collection_name, backup_file):
     from backup__mongodb import backupmongodb
-    res = check_parameters(auto_backup, interval, frequency, storage_option, provider, notification, slack_token, channel_id, restore, backup_file)
+    res = check_parameters(auto_backup, interval, frequency, notification, slack_token, channel_id, restore, backup_file)
     if res:
-        backupmongodb(host, port, username, password, database_name, compress, storage_option, provider, notification, slack_token, channel_id, logging, restore, backup_dir, csv_backup_format, collection_name, backup_file)
+        backupmongodb(host, port, username, password, database_name, compress, notification, slack_token, channel_id, logging, restore, backup_dir, csv_backup_format, collection_name, backup_file)
         if auto_backup:
             from auto_backup_services import automatic_backup_process
-            automatic_backup_process(host, port, username, password, database_name, compress, interval, frequency, storage_option, provider, notification, slack_token, channel_id, logging, restore, csv_backup_format, collection_name, backup_file, "NOSQL", "backup-mongodb")
+            automatic_backup_process(host, port, username, password, database_name, compress, interval, frequency, notification, slack_token, channel_id, logging, restore, csv_backup_format, collection_name, backup_file, "NOSQL", "backup-mongodb")
 
 
 cli.add_command(backup_mysql)
 cli.add_command(backup_postgresql)
 cli.add_command(backup_sqlite3)
 cli.add_command(backup_sqlserver)
-cli.add_command(backup_sybase)
 cli.add_command(backup_oracledb)
 cli.add_command(backup_mariadb)
 cli.add_command(backup_mongodb)
-cli.add_command(backup_teradata)
 
 if __name__ == "__main__":
     cli()

@@ -11,14 +11,12 @@ GREEN = "\033[32m"
 YELLOW = "\033[33m"
 BLUE = "\033[34m"
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s", )
-
-def backup_process(host, port, username, passwd, database_name, compress, storage_option, provider, notification, slack_token, channel_id, log, restore, csv_backup_format, tables, backup_file, databse_type, rdbms):
+logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s" )
+def backup_process(host, port, username, passwd, database_name, compress, notification, slack_token, channel_id, log, restore, csv_backup_format, tables, backup_file, databse_type, rdbms):
     cmd = ["python","main.py", rdbms, "-h", host, "-p", port, "-u", username, "-pw", passwd, "-db_name", database_name]
     if compress:
         cmd.append("-c")
-    if storage_option:
-        cmd.extend(["-so", "-prov", provider])
+
     if notification:
         cmd.extend(["-n", "-st", slack_token, "-ct", channel_id])
     if logging:
@@ -29,7 +27,7 @@ def backup_process(host, port, username, passwd, database_name, compress, storag
         cmd.append("-cf")
     if tables and databse_type=="SQL":
         for table in tables:
-            cmd.extend["-t",table]
+            cmd.extend(["-t",table])
     else:
         for collection in tables:
             cmd.extend(["-col", collection])
@@ -43,15 +41,14 @@ def backup_process(host, port, username, passwd, database_name, compress, storag
 
     
 
-def automatic_backup_process(host, port, username, passwd, database_name, compress, interval, frequency, storage_option, provider, notification, slack_token, channel_id, log, restore, csv_backup_format, tables, backup_file, database_type, rdbms):
+def automatic_backup_process(host, port, username, passwd, database_name, compress, interval, frequency, notification, slack_token, channel_id, log, restore, csv_backup_format, tables, backup_file, database_type, rdbms):
     def autobackup():
         try:
-            backup_process(host, port, username, passwd, database_name, compress, storage_option, provider, notification, slack_token, channel_id, log, restore, csv_backup_format, tables, backup_file, database_type, rdbms)
+            backup_process(host, port, username, passwd, database_name, compress, notification, slack_token, channel_id, log, restore, csv_backup_format, tables, backup_file, database_type, rdbms)
             logging.info(f"{GREEN}Backup process completed successfully!{RESET}")
         except Exception as e:
             logging.error(f"{RED}Error during the backup process: {str(e)}{RESET}")
             
-
     if frequency == "seconds":
         schedule.every(int(interval)).seconds.do(autobackup)
     elif frequency == "minutes":
