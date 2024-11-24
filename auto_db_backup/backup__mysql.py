@@ -46,8 +46,8 @@ def backupmysql(host, port, username, passwd,database_name, compress, notificati
         else:
             cursor.execute("SHOW TABLES")
             total_tables = [i[0] for i in cursor.fetchall()]
-            
-        sql_backup(csv_backup_format, backup_dir, total_tables, database_name, cursor, notification, slack_token, channel_id, log)
+        print("conneccted and exectuing the sql backup python file")
+        sql_backup(csv_backup_format, compress, backup_dir, total_tables, database_name, cursor, notification, slack_token, channel_id, log)
                        
     except Error as e:
         click.echo(f"Error while connecting to MySQL: {e}")

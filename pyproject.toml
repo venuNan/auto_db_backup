@@ -15,11 +15,9 @@ python = "^3.11"
 click = "^8.1.7"
 mysql-connector-python = "^9.0.0"
 schedule = "^1.2.2"
-boto3 = "^1.35.18"
 pymongo = "^4.8.0"
 psycopg2 = "^2.9.9"
 mariadb = "^1.1.10"
-azure-storage-blob = "^12.23.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
